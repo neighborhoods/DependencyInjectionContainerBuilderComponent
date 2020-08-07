@@ -1,0 +1,26 @@
+{
+  "name": "neighborhoods/dependency-injection-container-builder",
+  "description": "A dependency injection container builder based on Symfony.",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Oleg Kulyk",
+      "email": "olegkulik1985@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^7.3"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "Neighborhoods\\DependencyInjectionContainerBuilderComponent\\": [
+        "src",
+        "fab"
+      ]
+    }
+  }
+}
