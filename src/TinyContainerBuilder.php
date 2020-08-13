@@ -25,7 +25,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
     /**
      * @var string[]
      */
-    private $paths;
+    private $paths = [];
     /**
      * @var string[]
      */
@@ -61,7 +61,10 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
             throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
         }
         if (\is_dir($path)) {
-            $this->paths += (new Finder())->name('**/*.service.yml')->files()->in($path);
+            $serviceDefinitions = (new Finder())->name('*.service.yml')->files()->in($path);
+            foreach ($serviceDefinitions as $file) {
+                $this->paths[] = $file->getRealPath();
+            }
         } else {
             $this->paths[] = $path;
         }
