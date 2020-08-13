@@ -10,7 +10,13 @@
     }
   ],
   "require": {
-    "php": "^7.3"
+    "php": "^7.3",
+    "psr/container": "^1.0",
+    "symfony/dependency-injection": "^4",
+    "symfony/config": "^4",
+    "symfony/finder": "^4",
+    "symfony/yaml": "^4",
+    "sebastiaanluca/php-pipe-operator": "^3.0"
   },
   "require-dev": {
     "roave/security-advisories": "dev-master"
@@ -18,8 +24,7 @@
   "autoload": {
     "psr-4": {
       "Neighborhoods\\DependencyInjectionContainerBuilderComponent\\": [
-        "src",
-        "fab"
+        "src"
       ]
     }
   }
