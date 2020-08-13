@@ -26,7 +26,9 @@ class SymfonyConfigCacheHandlerTest extends \PHPUnit\Framework\TestCase
     {
         $content = <<<PHP
 <?php
-return new \Symfony\Component\DependencyInjection\Container();
+class Test extends \Symfony\Component\DependencyInjection\Container
+{
+}
 PHP;
 
         \file_put_contents(vfsStream::url('root/Test.php'), $content);
@@ -34,13 +36,16 @@ PHP;
 
         $actual = $cache->getFromCache();
         $this->assertInstanceOf(ContainerInterface::class, $actual);
+        $this->assertInstanceOf('Test', $actual);
     }
 
     public function testGetCacheMiss(): void
     {
         $content = <<<PHP
 <?php
-return new \Symfony\Component\DependencyInjection\Container();
+class Test extends \Symfony\Component\DependencyInjection\Container
+{
+}
 PHP;
 
         \file_put_contents(vfsStream::url('root/Test.php'), $content);

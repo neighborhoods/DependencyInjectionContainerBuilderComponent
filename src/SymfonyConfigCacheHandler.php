@@ -37,7 +37,8 @@ final class SymfonyConfigCacheHandler implements CacheHandlerInterface
     public function getFromCache(): ?ContainerInterface
     {
         if ($this->configCache->isFresh()) {
-            return require_once $this->configCache->getPath();
+            require_once $this->configCache->getPath();
+            return new $this->name;
         }
         return null;
     }
