@@ -27,6 +27,9 @@ final class SymfonyConfigCacheHandler implements CacheHandlerInterface
     public function __construct(string $name, string $cacheDirPath, bool $debug = false)
     {
         $this->name = $this->translate($name);
+        if (!\file_exists($cacheDirPath) || !is_dir($cacheDirPath)) {
+            throw new \RuntimeException(\sprintf('Cache directory is not accessible or invalid: %s', $cacheDirPath));
+        }
         $this->cacheDirPath = $cacheDirPath;
         $this->configCache = new ConfigCache($this->getFilePath(), $debug);
     }
@@ -56,7 +59,7 @@ final class SymfonyConfigCacheHandler implements CacheHandlerInterface
     private function translate(string $name): string
     {
         return take($name)
-            ->pipe('preg_replace', ...['/[^a-zA-Z0-9 ]/', '', PIPED_VALUE])
+            ->pipe('preg_replace', ...['/[^a-zA-Z ]/', '', PIPED_VALUE])
             ->pipe('ucwords')
             ->pipe('str_replace', ...[' ', '', PIPED_VALUE])
             ->get();

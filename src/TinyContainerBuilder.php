@@ -10,6 +10,7 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
 final class TinyContainerBuilder implements ContainerBuilderInterface
@@ -55,7 +56,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
                     \sprintf('When relative path is provided root should be set first. Privided: %s', $path)
                 );
             }
-            $path = $this->rootPath . '/' . $path;
+            $path = rtrim($this->rootPath, '/') . '/' . $path;
         }
         if (!\file_exists($path)) {
             throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
@@ -63,7 +64,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         if (\is_dir($path)) {
             $serviceDefinitions = (new Finder())->name('*.service.yml')->files()->in($path);
             foreach ($serviceDefinitions as $file) {
-                $this->paths[] = $file->getRealPath();
+                $this->paths[] = $file->getPathname();
             }
         } else {
             $this->paths[] = $path;
@@ -124,6 +125,6 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     private function isAbsolute(string $path)
     {
-        return '/' === $path[0];
+        return (new Filesystem())->isAbsolutePath($path);
     }
 }

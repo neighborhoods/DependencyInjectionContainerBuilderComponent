@@ -19,12 +19,17 @@
     "sebastiaanluca/php-pipe-operator": "^3.0"
   },
   "require-dev": {
-    "roave/security-advisories": "dev-master"
+    "roave/security-advisories": "dev-master",
+    "phpunit/phpunit": "^9.3",
+    "mikey179/vfsstream": "^1.6"
   },
   "autoload": {
     "psr-4": {
       "Neighborhoods\\DependencyInjectionContainerBuilderComponent\\": [
         "src"
+      ],
+      "Neighborhoods\\DependencyInjectionContainerBuilderComponent\\Test\\": [
+        "tests"
       ]
     }
   }
