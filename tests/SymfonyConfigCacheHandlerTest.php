@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Neighborhoods\DependencyInjectionContainerBuilderComponent\Test;
 
 use Neighborhoods\DependencyInjectionContainerBuilderComponent\SymfonyConfigCacheHandler;
-use Neighborhoods\DependencyInjectionContainerBuilderComponent\TinyContainerBuilder;
 use org\bovigo\vfs\vfsStream;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\Config\ConfigCacheInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 
 class SymfonyConfigCacheHandlerTest extends \PHPUnit\Framework\TestCase
 {
@@ -32,7 +33,13 @@ class Test extends \Symfony\Component\DependencyInjection\Container
 PHP;
 
         \file_put_contents(vfsStream::url('root/Test.php'), $content);
-        $cache = new SymfonyConfigCacheHandler('test', vfsStream::url('root'), false);
+        $configCache = $this->getMockBuilder(ConfigCacheInterface::class)->getMock();
+        $configCache->expects($this->once())->method('isFresh')->willReturn(true);
+        $configCache->expects($this->once())->method('getPath')->willReturn(vfsStream::url('root/Test.php'));
+
+        $cache = (new SymfonyConfigCacheHandler())->setName('test')
+            ->setConfigCache($configCache);
+
 
         $actual = $cache->getFromCache();
         $this->assertInstanceOf(ContainerInterface::class, $actual);
@@ -49,21 +56,35 @@ class Test extends \Symfony\Component\DependencyInjection\Container
 PHP;
 
         \file_put_contents(vfsStream::url('root/Test.php'), $content);
-        $cache = new SymfonyConfigCacheHandler('test', vfsStream::url('root'), true);
+        $configCache = $this->getMockBuilder(ConfigCacheInterface::class)->getMock();
+        $configCache->expects($this->once())->method('isFresh')->willReturn(false);
+        $cache = (new SymfonyConfigCacheHandler())->setName('test')
+            ->setConfigCache($configCache);
 
-        // no Metadata file, cache is considered stalled
-        $actual = $cache->getFromCache();
-        $this->assertNull($actual);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('No cache existing for Container Builder');
+
+        $cache->getFromCache();
     }
 
     public function testCache(): void
     {
-        $cache = new SymfonyConfigCacheHandler('j1o2k3e', vfsStream::url('root'));
+        $dumperBuilder = $this->getMockBuilder(SymfonyConfigCacheHandler\Dumper\BuilderInterface::class)->getMock();
+        $dumper = $this->getMockBuilder(PhpDumper::class)->disableOriginalConstructor()->getMock();
+        $dumper->expects($this->once())->method('dump')->willReturn('bla123');
+        $dumperBuilder->expects($this->once())->method('build')->willReturn($dumper);
+        $configCache = $this->getMockBuilder(ConfigCacheInterface::class)->getMock();
+        $cache = (new SymfonyConfigCacheHandler())->setName('test')
+            ->setConfigCache($configCache)
+            ->setDumperBuilder($dumperBuilder);
 
-        $builder = new ContainerBuilder();
-        $builder->compile();
+        $builder = $this->getMockBuilder(ContainerBuilder::class)->getMock();
+        $builder->expects($this->once())->method('getResources')->willReturn([]);
+
+        $dumperBuilder->expects($this->once())->method('setContainerBuilder')->with($builder)->willReturnSelf();
+        $configCache->expects($this->once())->method('write')->with('bla123', []);
+
         $cache->cache($builder);
-
-        $this->assertTrue(\file_exists(vfsStream::url('root/Joke.php')));
     }
 }

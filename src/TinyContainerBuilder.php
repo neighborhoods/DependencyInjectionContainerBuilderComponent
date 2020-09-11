@@ -22,11 +22,15 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
     /**
      * @var ContainerBuilder
      */
-    private $builder;
+    private $containerBuilder;
     /**
      * @var string[]
      */
     private $paths = [];
+    /**
+     * @var array
+     */
+    private $compilerPasses = [];
     /**
      * @var string[]
      */
@@ -36,13 +40,11 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
      */
     private $cacheHandler;
 
-    public function __construct()
-    {
-        $this->builder = new ContainerBuilder();
-    }
-
     public function setRootPath(string $root): ContainerBuilderInterface
     {
+        if (isset($this->rootPath)) {
+            throw new \LogicException('Root path is already set');
+        }
         $this->rootPath = $root;
 
         return $this;
@@ -79,34 +81,45 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         $type = PassConfig::TYPE_BEFORE_OPTIMIZATION,
         int $priority = 0
     ): ContainerBuilderInterface {
-        $this->builder->addCompilerPass($compilerPass, $type, $priority);
+        $this->compilerPasses[] = [
+            'pass' => $compilerPass,
+            'type' => $type,
+            'priority' => $priority,
+        ];
 
         return $this;
     }
 
     public function build(): ContainerInterface
     {
-        if ($this->cacheHandler && ($fromCache = $this->cacheHandler->getFromCache())) {
-            return $fromCache;
+        if ($this->hasCacheHandler() && $this->getCacheHandler()->hasInCache()) {
+            return $this->getCacheHandler()->getFromCache();
         }
-        $loader = new YamlFileLoader($this->builder, new FileLocator());
+        $loader = new YamlFileLoader($this->containerBuilder, new FileLocator());
         foreach ($this->paths as $file) {
             $loader->import($file);
         }
-        foreach ($this->publicServices as $publicService) {
-            $this->builder->getDefinition($publicService)->setPublic(true);
+        foreach ($this->compilerPasses as $data) {
+            $this->getInternalContainer()->addCompilerPass($data['pass'], $data['type'], $data['priority']);
         }
-        $this->builder->compile(true);
-        if ($this->cacheHandler) {
-            $this->cacheHandler->cache($this->builder);
+        foreach ($this->publicServices as $publicService) {
+            $this->getInternalContainer()->getDefinition($publicService)->setPublic(true);
+        }
+        $this->getInternalContainer()->compile(true);
+        if ($this->hasCacheHandler()) {
+            $this->getCacheHandler()->cache($this->containerBuilder);
         }
 
-        return $this->builder;
+        return $this->getInternalContainer();
     }
 
     public function getInternalContainer(): \Symfony\Component\DependencyInjection\ContainerBuilder
     {
-        return $this->builder;
+        if ($this->containerBuilder === null) {
+            throw new \LogicException('Container Builder is not set');
+        }
+
+        return $this->containerBuilder;
     }
 
     public function makePublic(string $service): ContainerBuilderInterface
@@ -118,7 +131,34 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function setCacheHandler(CacheHandlerInterface $cacheHandler): ContainerBuilderInterface
     {
+        if ($this->hasCacheHandler()) {
+            throw new \LogicException('Cache Handler has already been set');
+        }
         $this->cacheHandler = $cacheHandler;
+
+        return $this;
+    }
+
+    public function getCacheHandler(): CacheHandlerInterface
+    {
+        if (!$this->hasCacheHandler()) {
+            throw new \LogicException('Cache Handler is not set');
+        }
+
+        return $this->cacheHandler;
+    }
+
+    public function hasCacheHandler(): bool
+    {
+        return $this->cacheHandler !== null;
+    }
+
+    public function setContainerBuilder(ContainerBuilder $containerBuilder): self
+    {
+        if (isset($this->containerBuilder)) {
+            throw new \LogicException('Container Builder is already set');
+        }
+        $this->containerBuilder = $containerBuilder;
 
         return $this;
     }

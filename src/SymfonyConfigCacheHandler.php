@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Neighborhoods\DependencyInjectionContainerBuilderComponent;
 
+use Neighborhoods\DependencyInjectionContainerBuilderComponent\SymfonyConfigCacheHandler\Dumper\BuilderInterface;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\Config\ConfigCache;
+use Symfony\Component\Config\ConfigCacheInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 
 final class SymfonyConfigCacheHandler implements CacheHandlerInterface
 {
@@ -16,53 +16,91 @@ final class SymfonyConfigCacheHandler implements CacheHandlerInterface
      */
     private $name;
     /**
-     * @var string
-     */
-    private $cacheDirPath;
-    /**
-     * @var ConfigCache
+     * @var ConfigCacheInterface
      */
     private $configCache;
+    /**
+     * @var BuilderInterface
+     */
+    private $dumperBuilder;
 
-    public function __construct(string $name, string $cacheDirPath, bool $debug = false)
+    public function getFromCache(): ContainerInterface
     {
-        $this->name = $this->translate($name);
-        if (!\file_exists($cacheDirPath) || !is_dir($cacheDirPath)) {
-            throw new \RuntimeException(\sprintf('Cache directory is not accessible or invalid: %s', $cacheDirPath));
-        }
-        $this->cacheDirPath = $cacheDirPath;
-        $this->configCache = new ConfigCache($this->getFilePath(), $debug);
-    }
+        if ($this->getConfigCache()->isFresh()) {
+            require_once $this->getConfigCache()->getPath();
 
-    public function getFromCache(): ?ContainerInterface
-    {
-        if ($this->configCache->isFresh()) {
-            require_once $this->configCache->getPath();
             return new $this->name;
         }
-        return null;
+        throw new \LogicException('No cache existing for Container Builder');
     }
 
     public function cache(ContainerBuilder $containerBuilder): void
     {
-        $dumper = new PhpDumper($containerBuilder);
-        $this->configCache->write(
-            $dumper->dump(['class' => $this->name]),
+        $this->getConfigCache()->write(
+            $this->getDumperBuilder()->setContainerBuilder($containerBuilder)->build()->dump(['class' => $this->getName()]),
             $containerBuilder->getResources()
         );
     }
 
-    private function getFilePath(): string
+    public function hasInCache(): bool
     {
-        return rtrim($this->cacheDirPath, '/') . '/' . $this->name . '.php';
+        return $this->configCache->isFresh();
     }
 
-    private function translate(string $name): string
+    public function getName(): string
     {
-        return take($name)
-            ->pipe('preg_replace', ...['/[^a-zA-Z ]/', '', PIPED_VALUE])
-            ->pipe('ucwords')
-            ->pipe('str_replace', ...[' ', '', PIPED_VALUE])
-            ->get();
+        if ($this->name === null) {
+            throw new \LogicException('Name is not set');
+        }
+
+        return $this->name;
+    }
+
+    public function setName(string $name): self
+    {
+        if (isset($this->name)) {
+            throw new \LogicException('Name is already set');
+        }
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public function getConfigCache(): ConfigCacheInterface
+    {
+        if ($this->configCache === null) {
+            throw new \LogicException('Config Cache is not set');
+        }
+
+        return $this->configCache;
+    }
+
+    public function setConfigCache(ConfigCacheInterface $configCache): self
+    {
+        if (isset($this->configCache)) {
+            throw new \LogicException('Config Cache is already set');
+        }
+        $this->configCache = $configCache;
+
+        return $this;
+    }
+
+    public function getDumperBuilder(): BuilderInterface
+    {
+        if ($this->dumperBuilder === null) {
+            throw new \LogicException('Dumper Builder is not set');
+        }
+
+        return $this->dumperBuilder;
+    }
+
+    public function setDumperBuilder(BuilderInterface $dumperBuilder): self
+    {
+        if (isset($this->dumperBuilder)) {
+            throw new \LogicException('Dumper Builder is already set');
+        }
+        $this->dumperBuilder = $dumperBuilder;
+
+        return $this;
     }
 }

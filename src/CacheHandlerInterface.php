@@ -9,7 +9,9 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 interface CacheHandlerInterface
 {
-    public function getFromCache(): ?ContainerInterface;
+    public function hasInCache(): bool;
+
+    public function getFromCache(): ContainerInterface;
 
     public function cache(ContainerBuilder $containerBuilder): void;
 }
