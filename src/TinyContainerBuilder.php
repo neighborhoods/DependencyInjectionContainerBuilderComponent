@@ -95,7 +95,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         if ($this->hasCacheHandler() && $this->getCacheHandler()->hasInCache()) {
             return $this->getCacheHandler()->getFromCache();
         }
-        $loader = new YamlFileLoader($this->containerBuilder, new FileLocator());
+        $loader = new YamlFileLoader($this->getInternalContainer(), new FileLocator());
         foreach ($this->paths as $file) {
             $loader->import($file);
         }

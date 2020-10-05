@@ -44,7 +44,7 @@ final class SymfonyConfigCacheHandler implements CacheHandlerInterface
 
     public function hasInCache(): bool
     {
-        return $this->configCache->isFresh();
+        return $this->getConfigCache()->isFresh();
     }
 
     public function getName(): string
