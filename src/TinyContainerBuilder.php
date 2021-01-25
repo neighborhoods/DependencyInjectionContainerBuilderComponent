@@ -167,4 +167,43 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
     {
         return (new Filesystem())->isAbsolutePath($path);
     }
+
+    public function excludeSourcePath(string $excludePath): ContainerBuilderInterface
+    {
+        if (!$this->isAbsolute($excludePath)) {
+            if (!isset($this->rootPath)) {
+                throw new \LogicException(
+                    \sprintf('When relative path is provided root should be set first. Privided: %s', $excludePath)
+                );
+            }
+            $excludePath = rtrim($this->rootPath, '/') . '/' . $excludePath;
+        }
+        if (!\file_exists($excludePath)) {
+            throw new \RuntimeException(\sprintf('Provided exclude path is not a valid pathname: %s', $excludePath));
+        }
+
+        // The extra slash at the end prevents exclusion of sibling paths starting with exclude path name
+        // For example /usr/bin/php shouldn't exclude /usr/bin/php7.4
+        $excludePath = $this->removeRelativePathParts($excludePath) . '/';
+        $this->paths = array_filter($this->paths, function (string $path) use ($excludePath) {
+            return 0 !== stripos($this->removeRelativePathParts($path) . '/', $excludePath);
+        });
+
+        return $this;
+    }
+
+    private function removeRelativePathParts(string $path): string
+    {
+        $result = [];
+
+        foreach (explode('/', trim($path, '/')) as $segment) {
+            if ('..' === $segment) {
+                array_pop($result);
+            } elseif ('.' !== $segment && '' !== $segment) {
+                $result[] = $segment;
+            }
+        }
+
+        return implode('/', $result);
+    }
 }

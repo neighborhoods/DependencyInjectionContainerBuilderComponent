@@ -73,4 +73,97 @@ class TinyContainerBuilderTest extends \PHPUnit\Framework\TestCase
         $builder->setRootPath(vfsStream::url('root'));
         $builder->addSourcePath('somedir/somefile');
     }
+
+    public function testExcludeSourcePathWithoutRoot(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('When relative path is provided root should be set first.');
+
+        $builder = new TinyContainerBuilder();
+        $builder->excludeSourcePath('some/relative/path');
+    }
+
+    public function testExcludeNotAddedSourcePath(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $url = vfsStream::url('root/somedir/somefile');
+        touch($url);
+
+        $builder = new TinyContainerBuilder();
+        $builder->excludeSourcePath($url);
+
+        $reflection = new \ReflectionClass(TinyContainerBuilder::class);
+        $prop = $reflection->getProperty('paths');
+        $prop->setAccessible(true);
+        $actual = $prop->getValue($builder);
+
+        $this->assertSame([], $actual);
+    }
+
+    public function testExcludeAddedSourcePath(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $url = vfsStream::url('root/somedir/somefile');
+        touch($url);
+
+        $builder = new TinyContainerBuilder();
+        $builder->addSourcePath($url);
+        $builder->excludeSourcePath($url);
+
+        $reflection = new \ReflectionClass(TinyContainerBuilder::class);
+        $prop = $reflection->getProperty('paths');
+        $prop->setAccessible(true);
+        $actual = $prop->getValue($builder);
+
+        $this->assertSame([], $actual);
+    }
+
+    public function testExcludeParentDirectory(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $url = vfsStream::url('root/somedir/somefile');
+        touch($url);
+
+        $builder = new TinyContainerBuilder();
+        $builder->addSourcePath($url);
+        $builder->excludeSourcePath($url . '/..');
+
+        $reflection = new \ReflectionClass(TinyContainerBuilder::class);
+        $prop = $reflection->getProperty('paths');
+        $prop->setAccessible(true);
+        $actual = $prop->getValue($builder);
+
+        $this->assertSame([], $actual);
+    }
+
+    public function testDoesntExcludeSiblingSourcePath(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $url = vfsStream::url('root/somedir/somefile');
+        touch($url);
+        $excludePath = vfsStream::url('root/somedir/some');
+        touch($excludePath);
+
+        $builder = new TinyContainerBuilder();
+        $builder->addSourcePath($url);
+        $builder->excludeSourcePath($excludePath);
+
+        $reflection = new \ReflectionClass(TinyContainerBuilder::class);
+        $prop = $reflection->getProperty('paths');
+        $prop->setAccessible(true);
+        $actual = $prop->getValue($builder);
+
+        $this->assertSame(['vfs://root/somedir/somefile'], $actual);
+    }
+
+    public function testExcludeSourceInvalidPath(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Provided exclude path is not a valid pathname:');
+        mkdir(vfsStream::url('root/somedir'));
+
+        $builder = new TinyContainerBuilder();
+        $builder->setRootPath(vfsStream::url('root'));
+        $builder->excludeSourcePath('somedir/somefile');
+    }
 }
