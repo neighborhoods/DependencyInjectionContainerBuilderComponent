@@ -66,6 +66,20 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         return $this;
     }
 
+    public function excludeSourcePath(string $excludePath): ContainerBuilderInterface
+    {
+        $excludePath = $this->makePathAbsolute($excludePath);
+
+        // The extra slash at the end prevents exclusion of sibling paths starting with exclude path name
+        // For example /usr/bin/php shouldn't exclude /usr/bin/php7.4
+        $excludePath .= '/';
+        $this->paths = array_filter($this->paths, static function (string $path) use ($excludePath) {
+            return 0 !== stripos($path . '/', $excludePath);
+        });
+
+        return $this;
+    }
+
     public function addCompilerPass(
         CompilerPassInterface $compilerPass,
         $type = PassConfig::TYPE_BEFORE_OPTIMIZATION,
@@ -153,25 +167,6 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         return $this;
     }
 
-    private function isAbsolute(string $path)
-    {
-        return (new Filesystem())->isAbsolutePath($path);
-    }
-
-    public function excludeSourcePath(string $excludePath): ContainerBuilderInterface
-    {
-        $excludePath = $this->makePathAbsolute($excludePath);
-
-        // The extra slash at the end prevents exclusion of sibling paths starting with exclude path name
-        // For example /usr/bin/php shouldn't exclude /usr/bin/php7.4
-        $excludePath .= '/';
-        $this->paths = array_filter($this->paths, function (string $path) use ($excludePath) {
-            return 0 !== stripos($path . '/', $excludePath);
-        });
-
-        return $this;
-    }
-
     private function makePathAbsolute(string $path): string
     {
         if (!$this->isAbsolute($path)) {
@@ -187,6 +182,11 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
             throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
         }
         return $path;
+    }
+
+    private function isAbsolute(string $path): bool
+    {
+        return (new Filesystem())->isAbsolutePath($path);
     }
 
     private function resolveRelativePathParts(string $path): string
