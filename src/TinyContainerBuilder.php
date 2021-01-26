@@ -194,8 +194,15 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     private function resolveRelativePathParts(string $path): string
     {
-        $result = [];
+        // Remove protocol, if any
+        $protocol = null;
+        if (($protocolLength = strpos($path, '://')) > 0) {
+            $protocol = substr($path, 0, $protocolLength);
+            $path = substr($path, $protocolLength + 3);//3 is the length of '://'
+        }
 
+        // Resolve '.', '..' and redundant directory separators
+        $result = [];
         foreach (explode('/', trim($path, '/')) as $segment) {
             if ('..' === $segment) {
                 array_pop($result);
@@ -203,7 +210,12 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
                 $result[] = $segment;
             }
         }
+        $path = implode('/', $result);
 
-        return implode('/', $result);
+        // Add protocol, if previously removed
+        if (isset($protocol)) {
+            $path = $protocol . '://' . $path;
+        }
+        return $path;
     }
 }
