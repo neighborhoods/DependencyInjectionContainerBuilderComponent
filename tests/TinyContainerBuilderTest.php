@@ -130,7 +130,7 @@ class TinyContainerBuilderTest extends \PHPUnit\Framework\TestCase
     public function testExcludeSourceInvalidPath(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Provided exclude path is not a valid pathname:');
+        $this->expectExceptionMessage('Provided path is not a valid pathname:');
         mkdir(vfsStream::url('root/somedir'));
 
         $builder = new TinyContainerBuilder();

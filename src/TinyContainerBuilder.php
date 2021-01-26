@@ -45,24 +45,14 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         if (isset($this->rootPath)) {
             throw new \LogicException('Root path is already set');
         }
-        $this->rootPath = $root;
+        $this->rootPath = $this->resolveRelativePathParts($root);
 
         return $this;
     }
 
     public function addSourcePath(string $path): ContainerBuilderInterface
     {
-        if (!$this->isAbsolute($path)) {
-            if (!isset($this->rootPath)) {
-                throw new \LogicException(
-                    \sprintf('When relative path is provided root should be set first. Provided: %s', $path)
-                );
-            }
-            $path = rtrim($this->rootPath, '/') . '/' . $path;
-        }
-        if (!\file_exists($path)) {
-            throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
-        }
+        $path = $this->makePathAbsolute($path);
         if (\is_dir($path)) {
             $serviceDefinitions = (new Finder())->name('*.service.yml')->files()->in($path);
             foreach ($serviceDefinitions as $file) {
@@ -170,26 +160,33 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function excludeSourcePath(string $excludePath): ContainerBuilderInterface
     {
-        if (!$this->isAbsolute($excludePath)) {
-            if (!isset($this->rootPath)) {
-                throw new \LogicException(
-                    \sprintf('When relative path is provided root should be set first. Provided: %s', $excludePath)
-                );
-            }
-            $excludePath = rtrim($this->rootPath, '/') . '/' . $excludePath;
-        }
-        if (!\file_exists($excludePath)) {
-            throw new \RuntimeException(\sprintf('Provided exclude path is not a valid pathname: %s', $excludePath));
-        }
+        $excludePath = $this->makePathAbsolute($excludePath);
 
         // The extra slash at the end prevents exclusion of sibling paths starting with exclude path name
         // For example /usr/bin/php shouldn't exclude /usr/bin/php7.4
-        $excludePath = $this->resolveRelativePathParts($excludePath) . '/';
+        $excludePath .= '/';
         $this->paths = array_filter($this->paths, function (string $path) use ($excludePath) {
-            return 0 !== stripos($this->resolveRelativePathParts($path) . '/', $excludePath);
+            return 0 !== stripos($path . '/', $excludePath);
         });
 
         return $this;
+    }
+
+    private function makePathAbsolute(string $path): string
+    {
+        if (!$this->isAbsolute($path)) {
+            if (!isset($this->rootPath)) {
+                throw new \LogicException(
+                    \sprintf('When relative path is provided root should be set first. Provided: %s', $path)
+                );
+            }
+            $path = rtrim($this->rootPath, '/') . '/' . $path;
+        }
+        $path = $this->resolveRelativePathParts($path);
+        if (!\file_exists($path)) {
+            throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
+        }
+        return $path;
     }
 
     private function resolveRelativePathParts(string $path): string
