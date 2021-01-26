@@ -55,7 +55,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         if (!$this->isAbsolute($path)) {
             if (!isset($this->rootPath)) {
                 throw new \LogicException(
-                    \sprintf('When relative path is provided root should be set first. Privided: %s', $path)
+                    \sprintf('When relative path is provided root should be set first. Provided: %s', $path)
                 );
             }
             $path = rtrim($this->rootPath, '/') . '/' . $path;
@@ -173,7 +173,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         if (!$this->isAbsolute($excludePath)) {
             if (!isset($this->rootPath)) {
                 throw new \LogicException(
-                    \sprintf('When relative path is provided root should be set first. Privided: %s', $excludePath)
+                    \sprintf('When relative path is provided root should be set first. Provided: %s', $excludePath)
                 );
             }
             $excludePath = rtrim($this->rootPath, '/') . '/' . $excludePath;
@@ -184,15 +184,15 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
         // The extra slash at the end prevents exclusion of sibling paths starting with exclude path name
         // For example /usr/bin/php shouldn't exclude /usr/bin/php7.4
-        $excludePath = $this->removeRelativePathParts($excludePath) . '/';
+        $excludePath = $this->resolveRelativePathParts($excludePath) . '/';
         $this->paths = array_filter($this->paths, function (string $path) use ($excludePath) {
-            return 0 !== stripos($this->removeRelativePathParts($path) . '/', $excludePath);
+            return 0 !== stripos($this->resolveRelativePathParts($path) . '/', $excludePath);
         });
 
         return $this;
     }
 
-    private function removeRelativePathParts(string $path): string
+    private function resolveRelativePathParts(string $path): string
     {
         $result = [];
 
