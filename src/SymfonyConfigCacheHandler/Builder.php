@@ -108,7 +108,7 @@ class Builder implements BuilderInterface
     private function translate(string $name): string
     {
         return take($name)
-            ->pipe('preg_replace', ...['/[^a-zA-Z ]/', '', PIPED_VALUE])
+            ->pipe('preg_replace', ...['/[^a-zA-Z0-9 ]/', '', PIPED_VALUE])
             ->pipe('ucwords')
             ->pipe('str_replace', ...[' ', '', PIPED_VALUE])
             ->get();
