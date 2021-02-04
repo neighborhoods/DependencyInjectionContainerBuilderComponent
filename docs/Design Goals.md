@@ -6,6 +6,7 @@
 * gives a simple interface to cache
 * gives an interface to turn cache off (default on)
 * expose the ability make a service public
+* expose the ability make all services public
 * expose the ability to dynamically set a service
 * ~~as much as possible provide both an PHP and env var API~~
 

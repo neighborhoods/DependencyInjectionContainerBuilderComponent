@@ -11,6 +11,8 @@ interface ContainerBuilderInterface
 {
     public function makePublic(string $service): ContainerBuilderInterface;
 
+    public function makeAllPublic(): ContainerBuilderInterface;
+
     public function setRootPath(string $root): ContainerBuilderInterface;
 
     public function addSourcePath(string $path): ContainerBuilderInterface;
