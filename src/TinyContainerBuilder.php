@@ -134,6 +134,9 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function makePublic(string $service): ContainerBuilderInterface
     {
+        if ($this->makeAllServicesPublic) {
+            throw new \LogicException('Container builder has already been instructed to make all services public.');
+        }
         $this->publicServices[] = $service;
 
         return $this;
@@ -141,6 +144,9 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function makeAllPublic(): ContainerBuilderInterface
     {
+        if ($this->makeAllServicesPublic) {
+            throw new \LogicException('Container builder has already been instructed to make all services public.');
+        }
         $this->makeAllServicesPublic = true;
         return $this;
     }
