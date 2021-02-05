@@ -49,24 +49,14 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         if (isset($this->rootPath)) {
             throw new \LogicException('Root path is already set');
         }
-        $this->rootPath = $root;
+        $this->rootPath = $this->resolveRelativePathParts($root);
 
         return $this;
     }
 
     public function addSourcePath(string $path): ContainerBuilderInterface
     {
-        if (!$this->isAbsolute($path)) {
-            if (!isset($this->rootPath)) {
-                throw new \LogicException(
-                    \sprintf('When relative path is provided root should be set first. Privided: %s', $path)
-                );
-            }
-            $path = rtrim($this->rootPath, '/') . '/' . $path;
-        }
-        if (!\file_exists($path)) {
-            throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
-        }
+        $path = $this->makePathAbsolute($path);
         if (\is_dir($path)) {
             $serviceDefinitions = (new Finder())->name('*.service.yml')->files()->in($path);
             foreach ($serviceDefinitions as $file) {
@@ -76,6 +66,20 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
             $this->paths[] = $path;
         }
         $this->paths = array_unique($this->paths);
+
+        return $this;
+    }
+
+    public function excludeSourcePath(string $excludePath): ContainerBuilderInterface
+    {
+        $excludePath = $this->makePathAbsolute($excludePath);
+
+        // The extra slash at the end prevents exclusion of sibling paths starting with exclude path name
+        // For example /usr/bin/php shouldn't exclude /usr/bin/php7.4
+        $excludePath .= '/';
+        $this->paths = array_filter($this->paths, static function (string $path) use ($excludePath) {
+            return 0 !== stripos($path . '/', $excludePath);
+        });
 
         return $this;
     }
@@ -185,8 +189,52 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         return $this;
     }
 
-    private function isAbsolute(string $path)
+    private function makePathAbsolute(string $path): string
+    {
+        if (!$this->isAbsolute($path)) {
+            if (!isset($this->rootPath)) {
+                throw new \LogicException(
+                    \sprintf('When relative path is provided root should be set first. Provided: %s', $path)
+                );
+            }
+            $path = rtrim($this->rootPath, '/') . '/' . $path;
+        }
+        $path = $this->resolveRelativePathParts($path);
+        if (!\file_exists($path)) {
+            throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
+        }
+        return $path;
+    }
+
+    private function isAbsolute(string $path): bool
     {
         return (new Filesystem())->isAbsolutePath($path);
+    }
+
+    private function resolveRelativePathParts(string $path): string
+    {
+        // Remove protocol, if any
+        $protocol = null;
+        if (($protocolLength = strpos($path, '://')) > 0) {
+            $protocol = substr($path, 0, $protocolLength);
+            $path = substr($path, $protocolLength + 3);//3 is the length of '://'
+        }
+
+        // Resolve '.', '..' and redundant directory separators
+        $result = [];
+        foreach (explode('/', trim($path, '/')) as $segment) {
+            if ('..' === $segment) {
+                array_pop($result);
+            } elseif ('.' !== $segment && '' !== $segment) {
+                $result[] = $segment;
+            }
+        }
+        $path = implode('/', $result);
+
+        // Add protocol, if previously removed
+        if (isset($protocol)) {
+            $path = $protocol . '://' . $path;
+        }
+        return $path;
     }
 }

@@ -47,3 +47,7 @@ $container = (new \Neighborhoods\DependencyInjectionContainerBuilderComponent\Ti
 * `setDebug`: takes a boolean flag whether "debug mode" should be on or off. When debug mode is on, cache is going
     to "listen" for the changes in source configuration files. If any change is introduced, cache would be considered
     invalid, and a new one will be generated and stored. It's advised to use `true` only for development.
+
+## Compatibility
+
+This Container Builder supports unix-like path.

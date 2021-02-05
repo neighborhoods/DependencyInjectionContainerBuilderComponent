@@ -17,6 +17,8 @@ interface ContainerBuilderInterface
 
     public function addSourcePath(string $path): ContainerBuilderInterface;
 
+    public function excludeSourcePath(string $path): ContainerBuilderInterface;
+
     public function addCompilerPass(CompilerPassInterface $compilerPass): ContainerBuilderInterface;
 
     public function build(): ContainerInterface;
