@@ -20,6 +20,7 @@ $container = (new \Neighborhoods\DependencyInjectionContainerBuilderComponent\Ti
 * `setRootPath`: takes the path to the project root (where `src` and `fab` folders are located)
 * `addSourcePath`: takes the path to a folder containing definitions for Container Builder
 * `makePublic`: takes the service URI (usually class name) and makes it public
+* `makeAllPublic`: makes all services public
 * `addCompilerPass`: takes instance of `\Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface` and
     supplies it to the `addCompilerPass` method of ContainerBuilder.
 * `build`: creates and returns an instance of `\Psr\Container\ContainerInterface`

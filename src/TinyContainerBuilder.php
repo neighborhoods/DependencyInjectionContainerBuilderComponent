@@ -36,6 +36,10 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
      */
     private $publicServices = [];
     /**
+     * @var boolean
+     */
+    private $makeAllServicesPublic = false;
+    /**
      * @var CacheHandlerInterface
      */
     private $cacheHandler;
@@ -102,8 +106,14 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
         foreach ($this->compilerPasses as $data) {
             $this->getInternalContainer()->addCompilerPass($data['pass'], $data['type'], $data['priority']);
         }
-        foreach ($this->publicServices as $publicService) {
-            $this->getInternalContainer()->getDefinition($publicService)->setPublic(true);
+        if ($this->makeAllServicesPublic) {
+            foreach ($this->getInternalContainer()->getDefinitions() as $definition) {
+                $definition->setPublic(true);
+            }
+        } else {
+            foreach ($this->publicServices as $publicService) {
+                $this->getInternalContainer()->getDefinition($publicService)->setPublic(true);
+            }
         }
         $this->getInternalContainer()->compile(true);
         if ($this->hasCacheHandler()) {
@@ -124,8 +134,20 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function makePublic(string $service): ContainerBuilderInterface
     {
+        if ($this->makeAllServicesPublic) {
+            throw new \LogicException('Container builder has already been instructed to make all services public.');
+        }
         $this->publicServices[] = $service;
 
+        return $this;
+    }
+
+    public function makeAllPublic(): ContainerBuilderInterface
+    {
+        if ($this->makeAllServicesPublic) {
+            throw new \LogicException('Container builder has already been instructed to make all services public.');
+        }
+        $this->makeAllServicesPublic = true;
         return $this;
     }
 
