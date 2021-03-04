@@ -110,6 +110,9 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
             foreach ($this->getInternalContainer()->getDefinitions() as $definition) {
                 $definition->setPublic(true);
             }
+            foreach ($this->getInternalContainer()->getAliases() as $alias) {
+                $alias->setPublic(true);
+            }
         } else {
             foreach ($this->publicServices as $publicService) {
                 $this->getInternalContainer()->getDefinition($publicService)->setPublic(true);
