@@ -15,8 +15,7 @@
     "symfony/dependency-injection": "^4",
     "symfony/config": "^4",
     "symfony/finder": "^4",
-    "symfony/yaml": "^4",
-    "sebastiaanluca/php-pipe-operator": "^3.0"
+    "symfony/yaml": "^4"
   },
   "require-dev": {
     "roave/security-advisories": "dev-master",
