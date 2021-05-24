@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Neighborhoods\DependencyInjectionContainerBuilderComponent\Test;
 
 use Neighborhoods\DependencyInjectionContainerBuilderComponent\TinyContainerBuilder;
+use PHPUnit\Framework\TestCase;
+use stdClass;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use org\bovigo\vfs\vfsStream;
+use Throwable;
 
-class TinyContainerBuilderTest extends \PHPUnit\Framework\TestCase
+class TinyContainerBuilderTest extends TestCase
 {
     /**
      * @var \org\bovigo\vfs\vfsStreamDirectory
@@ -22,45 +26,97 @@ class TinyContainerBuilderTest extends \PHPUnit\Framework\TestCase
     public function testAddSourcePathWithoutRoot(): void
     {
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('When relative path is provided root should be set first.');
+        $this->expectExceptionMessage('When relative path is provided root should be set.');
 
         $builder = new TinyContainerBuilder();
+        $builder->setContainerBuilder(new ContainerBuilder());
         $builder->addSourcePath('some/relative/path');
+        $builder->build();
     }
 
     public function testAddSourcePathAbsoluteDirectory(): void
     {
         mkdir(vfsStream::url('root/somedir'));
-        $url = vfsStream::url('root/somedir/somefile');
-        touch($url);
+        $directoryPath = vfsStream::url('root/somedir');
+        $url = vfsStream::url('root/somedir/somefile.service.yml');
+        file_put_contents($url, "services:\n  stdClass:\n    class: stdClass");
 
         $builder = new TinyContainerBuilder();
-        $builder->addSourcePath($url);
+        $builder->setContainerBuilder(new ContainerBuilder());
+        $builder->setRootPath(vfsStream::url('root'));
+        $builder->addSourcePath($directoryPath);
+        $builder->makeAllPublic();
+        $container = $builder->build();
 
-        $reflection = new \ReflectionClass(TinyContainerBuilder::class);
-        $prop = $reflection->getProperty('paths');
-        $prop->setAccessible(true);
-        $actual = $prop->getValue($builder);
-
-        $this->assertSame(['vfs://root/somedir/somefile'], $actual);
+        $service = $container->get('stdClass');
+        self::assertEquals(stdClass::class, get_class($service));
     }
 
     public function testAddSourcePathRelativeDir(): void
     {
         mkdir(vfsStream::url('root/somedir'));
         $url = vfsStream::url('root/somedir/somefile.service.yml');
-        touch($url);
+        file_put_contents($url, "services:\n  stdClass:\n    class: stdClass");
 
         $builder = new TinyContainerBuilder();
+        $builder->setContainerBuilder(new ContainerBuilder());
         $builder->setRootPath(vfsStream::url('root'));
         $builder->addSourcePath('somedir');
+        $builder->makeAllPublic();
+        $container = $builder->build();
 
-        $reflection = new \ReflectionClass(TinyContainerBuilder::class);
-        $prop = $reflection->getProperty('paths');
-        $prop->setAccessible(true);
-        $actual = $prop->getValue($builder);
+        $service = $container->get('stdClass');
+        self::assertEquals(stdClass::class, get_class($service));
+    }
 
-        $this->assertSame(['vfs://root/somedir/somefile.service.yml'], $actual);
+    public function testAddSourcePathAbsoluteFile(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $filePath = vfsStream::url('root/somedir/somefile.service.yml');
+        file_put_contents($filePath, "services:\n  stdClass:\n    class: stdClass");
+
+        $builder = new TinyContainerBuilder();
+        $builder->setContainerBuilder(new ContainerBuilder());
+        $builder->setRootPath(vfsStream::url('root'));
+        $builder->addSourcePath($filePath);
+        $builder->makeAllPublic();
+        $container = $builder->build();
+
+        $service = $container->get('stdClass');
+        self::assertEquals(stdClass::class, get_class($service));
+    }
+
+    public function testAddSourcePathRelativePath(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $url = vfsStream::url('root/somedir/somefile.service.yml');
+        file_put_contents($url, "services:\n  stdClass:\n    class: stdClass");
+
+        $builder = new TinyContainerBuilder();
+        $builder->setContainerBuilder(new ContainerBuilder());
+        $builder->setRootPath(vfsStream::url('root'));
+        $builder->addSourcePath('somedir/somefile.service.yml');
+        $builder->makeAllPublic();
+        $container = $builder->build();
+
+        $service = $container->get('stdClass');
+        self::assertEquals(stdClass::class, get_class($service));
+    }
+
+    public function testAddSourcePathInvalidYaml(): void
+    {
+        mkdir(vfsStream::url('root/somedir'));
+        $filePath = vfsStream::url('root/somedir/somefile.service.yml');
+        file_put_contents($filePath, "services: stdClass: class");
+
+        $this->expectException(Throwable::class);
+
+        $builder = new TinyContainerBuilder();
+        $builder->setContainerBuilder(new ContainerBuilder());
+        $builder->setRootPath(vfsStream::url('root'));
+        $builder->addSourcePath($filePath);
+        $builder->makeAllPublic();
+        $builder->build();
     }
 
     public function testAddSourceInvalidPath(): void
@@ -70,7 +126,9 @@ class TinyContainerBuilderTest extends \PHPUnit\Framework\TestCase
         mkdir(vfsStream::url('root/somedir'));
 
         $builder = new TinyContainerBuilder();
+        $builder->setContainerBuilder(new ContainerBuilder());
         $builder->setRootPath(vfsStream::url('root'));
         $builder->addSourcePath('somedir/somefile');
+        $builder->build();
     }
 }
