@@ -26,7 +26,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
     /**
      * @var string[]
      */
-    private $paths = [];
+    private $sourcePaths = [];
     /**
      * @var array
      */
@@ -56,26 +56,7 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function addSourcePath(string $path): ContainerBuilderInterface
     {
-        if (!$this->isAbsolute($path)) {
-            if (!isset($this->rootPath)) {
-                throw new \LogicException(
-                    \sprintf('When relative path is provided root should be set first. Privided: %s', $path)
-                );
-            }
-            $path = rtrim($this->rootPath, '/') . '/' . $path;
-        }
-        if (!\file_exists($path)) {
-            throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $path));
-        }
-        if (\is_dir($path)) {
-            $serviceDefinitions = (new Finder())->name('*.service.yml')->files()->in($path);
-            foreach ($serviceDefinitions as $file) {
-                $this->paths[] = $file->getPathname();
-            }
-        } else {
-            $this->paths[] = $path;
-        }
-        $this->paths = array_unique($this->paths);
+        $this->sourcePaths[] = $path;
 
         return $this;
     }
@@ -96,16 +77,48 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
 
     public function build(): ContainerInterface
     {
+        // Get cached container if available
         if ($this->hasCacheHandler() && $this->getCacheHandler()->hasInCache()) {
             return $this->getCacheHandler()->getFromCache();
         }
-        $loader = new YamlFileLoader($this->getInternalContainer(), new FileLocator());
-        foreach ($this->paths as $file) {
-            $loader->import($file);
+
+        // Build service definition files
+        $serviceDefinitionPathnames = [];
+        foreach($this->sourcePaths as $sourcePath) {
+            if (!$this->isAbsolute($sourcePath)) {
+                if (!isset($this->rootPath)) {
+                    throw new \LogicException(
+                        \sprintf('When relative path is provided root should be set. Privided path: %s', $sourcePath)
+                    );
+                }
+                $sourcePath = rtrim($this->rootPath, '/') . '/' . $sourcePath;
+            }
+            if (!\file_exists($sourcePath)) {
+                throw new \RuntimeException(\sprintf('Provided path is not a valid pathname: %s', $sourcePath));
+            }
+            if (\is_dir($sourcePath)) {
+                $serviceDefinitionFiles = (new Finder())->name('*.service.yml')->files()->in($sourcePath);
+                foreach ($serviceDefinitionFiles as $file) {
+                    $serviceDefinitionPathnames[] = $file->getPathname();
+                }
+            } else {
+                $serviceDefinitionPathnames[] = $sourcePath;
+            }
         }
+        $serviceDefinitionPathnames = array_unique($serviceDefinitionPathnames);
+
+        // Import service definitions from files
+        $loader = new YamlFileLoader($this->getInternalContainer(), new FileLocator());
+        foreach ($serviceDefinitionPathnames as $serviceDefinitionPathname) {
+            $loader->import($serviceDefinitionPathname);
+        }
+
+        // Configure compiler passes
         foreach ($this->compilerPasses as $data) {
             $this->getInternalContainer()->addCompilerPass($data['pass'], $data['type'], $data['priority']);
         }
+
+        // Configure public services
         if ($this->makeAllServicesPublic) {
             foreach ($this->getInternalContainer()->getDefinitions() as $definition) {
                 $definition->setPublic(true);
@@ -118,6 +131,8 @@ final class TinyContainerBuilder implements ContainerBuilderInterface
                 $this->getInternalContainer()->getDefinition($publicService)->setPublic(true);
             }
         }
+
+        // Build and cache container
         $this->getInternalContainer()->compile(true);
         if ($this->hasCacheHandler()) {
             $this->getCacheHandler()->cache($this->containerBuilder);
