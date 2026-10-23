@@ -79,7 +79,7 @@ PHP;
             ->setConfigCache($configCache)
             ->setDumperBuilder($dumperBuilder);
 
-        $builder = $this->getMockBuilder(ContainerBuilder::class)->getMock();
+        $builder = $this->getMockBuilder(ContainerBuilder::class)->disableOriginalConstructor()->getMock();
         $builder->expects($this->once())->method('getResources')->willReturn([]);
 
         $dumperBuilder->expects($this->once())->method('setContainerBuilder')->with($builder)->willReturnSelf();
